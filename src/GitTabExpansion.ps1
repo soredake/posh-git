@@ -231,13 +231,24 @@ function script:gitFeatures($filter, $command) {
     # prefix that is not set for the repository is found as well.
     $featurePrefix = git config --get "gitflow.prefix.$command"
 
+    # The prefix must not be null, because it is used as the argument of a
+    # method of .NET, which does not accept null on all versions of
+    # PowerShell.
+    if ($null -eq $featurePrefix) {
+        $featurePrefix = ''
+    }
+
     # The user may have typed the prefix as well. The completion does not
     # contain the prefix, so it is not needed to match the filter.
     if ($featurePrefix -and $filter.StartsWith($featurePrefix)) {
         $filter = $filter.Substring($featurePrefix.Length)
     }
 
-    $branches = @(git branch --no-color | ForEach-Object { if ($_ -match "^\*?\s*$([regex]::Escape($featurePrefix))(?<ref>.*)") { $matches['ref'] } })
+    # The escaped prefix is computed once, because it is used for every
+    # branch.
+    $escapedFeaturePrefix = [regex]::Escape($featurePrefix)
+
+    $branches = @(git branch --no-color | ForEach-Object { if ($_ -match "^\*?\s*$escapedFeaturePrefix(?<ref>.*)") { $matches['ref'] } })
     $branches |
         Where-Object { $_ -ne '(no branch)' -and $_ -like "$filter*" } |
         quoteStringWithSpecialChars

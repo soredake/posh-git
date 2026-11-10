@@ -555,6 +555,47 @@ U  test/Unmerged.Tests.ps1
             $status.Working.Added.Count | Should -Be 1
             $status.Working.Added[0] | Should -Be 'test/Foo.Tests.ps1'
         }
+
+        It 'Falls back to Git when the status cache returns an error' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+## master
+?? test/Foo.Tests.ps1
+'@
+            }
+
+            # Simulate the cache service not being reachable.
+            function global:Get-GitStatusFromCache {
+                [PSCustomObject]@{ Error = 'the cache service is not running' }
+            }
+            try {
+                Mock -ModuleName posh-git Get-GitStatusFromCache {
+                    [PSCustomObject]@{ Error = 'the cache service is not running' }
+                }
+
+                $GitPromptSettings.EnableFileStatusFromCache = $true
+                try {
+                    $status = Get-GitStatus
+                }
+                finally {
+                    $GitPromptSettings.EnableFileStatusFromCache = $null
+                }
+            }
+            finally {
+                Remove-Item function:global:Get-GitStatusFromCache -ErrorAction SilentlyContinue
+            }
+
+            $status.Branch | Should -Be 'master'
+            $status.Branch | Should -Not -Be 'CACHE ERROR'
+            $status.HasUntracked | Should -Be $true
+            $status.Working.Added.Count | Should -Be 1
+            $status.Working.Added[0] | Should -Be 'test/Foo.Tests.ps1'
+        }
     }
 
     Context 'In .git' {

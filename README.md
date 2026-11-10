@@ -300,6 +300,9 @@ instead of running `git status` itself. The cache can make the prompt a lot fast
 Note that `EnableFileStatusFromCache` is only used to obtain the *file* status. The branch information is always
 read from Git.
 
+If the cache is enabled but the cache service is not running, posh-git falls back to reading the status from Git
+instead of showing `CACHE ERROR` in the prompt.
+
 ## Customizing the posh-git prompt
 
 When you import the posh-git module, it will replace PowerShell's default prompt function with a new prompt function.

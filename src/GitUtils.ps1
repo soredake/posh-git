@@ -5,6 +5,10 @@
 # written, so that the warning is only shown once per session.
 $script:GitStatusCacheUnavailableWarningWritten = $false
 
+# Set to $true once a warning about a failing Git status cache has been
+# written, so that the warning is only shown once per session.
+$script:GitStatusCacheErrorWarningWritten = $false
+
 <#
 .SYNOPSIS
     Gets the path to the current repository's .git dir.
@@ -301,48 +305,53 @@ function Get-GitStatus {
                         Write-Warning 'The GitStatusCachePoshClient module is not available, so the Git status cache cannot be used. Install and import the module to enable the cache, or set $GitPromptSettings.EnableFileStatusFromCache = $false to hide this warning.'
                     }
                 }
+                if ($useFileStatusCache -and $cacheResponse.Error) {
+                    # git-status-cache failed; set $global:GitStatusCacheLoggingEnabled = $true, call Restart-GitStatusCache,
+                    # and check %temp%\GitStatusCache_[timestamp].log for details.
+                    #
+                    # The cache is only an optimization, so fall back to asking Git
+                    # directly instead of showing "CACHE ERROR" in the prompt.
+                    dbg "Cache returned an error: $($cacheResponse.Error)" $sw
+                    $useFileStatusCache = $false
+
+                    if (!$script:GitStatusCacheErrorWarningWritten) {
+                        $script:GitStatusCacheErrorWarningWritten = $true
+                        Write-Warning "The Git status cache returned an error, so the status is read from Git instead. This may make the prompt slower. Error: $($cacheResponse.Error)"
+                    }
+                }
             }
 
             if ($useFileStatusCache) {
-                if ($cacheResponse.Error) {
-                    # git-status-cache failed; set $global:GitStatusCacheLoggingEnabled = $true, call Restart-GitStatusCache,
-                    # and check %temp%\GitStatusCache_[timestamp].log for details.
-                    dbg "Cache returned an error: $($cacheResponse.Error)" $sw
-                    $branch = "CACHE ERROR"
-                    $behindBy = 1
+                dbg 'Parsing status' $sw
+
+                $indexAdded.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexAdded))))
+                $indexModified.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexModified))))
+                foreach ($indexRenamed in $cacheResponse.IndexRenamed) {
+                    $indexModified.Add($indexRenamed.Old)
                 }
-                else {
-                    dbg 'Parsing status' $sw
+                $indexDeleted.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexDeleted))))
+                $indexUnmerged.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.Conflicted))))
 
-                    $indexAdded.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexAdded))))
-                    $indexModified.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexModified))))
-                    foreach ($indexRenamed in $cacheResponse.IndexRenamed) {
-                        $indexModified.Add($indexRenamed.Old)
-                    }
-                    $indexDeleted.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.IndexDeleted))))
-                    $indexUnmerged.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.Conflicted))))
+                $filesAdded.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingAdded))))
+                $filesModified.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingModified))))
+                foreach ($workingRenamed in $cacheResponse.WorkingRenamed) {
+                    $filesModified.Add($workingRenamed.Old)
+                }
+                $filesDeleted.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingDeleted))))
+                $filesUnmerged.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.Conflicted))))
 
-                    $filesAdded.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingAdded))))
-                    $filesModified.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingModified))))
-                    foreach ($workingRenamed in $cacheResponse.WorkingRenamed) {
-                        $filesModified.Add($workingRenamed.Old)
-                    }
-                    $filesDeleted.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.WorkingDeleted))))
-                    $filesUnmerged.AddRange($castStringSeq.Invoke($null, (, @($cacheResponse.Conflicted))))
+                $branch = $cacheResponse.Branch
+                $upstream = $cacheResponse.Upstream
+                $gone = $cacheResponse.UpstreamGone
+                $aheadBy = $cacheResponse.AheadBy
+                $behindBy = $cacheResponse.BehindBy
 
-                    $branch = $cacheResponse.Branch
-                    $upstream = $cacheResponse.Upstream
-                    $gone = $cacheResponse.UpstreamGone
-                    $aheadBy = $cacheResponse.AheadBy
-                    $behindBy = $cacheResponse.BehindBy
+                if ($settings.EnableStashStatus -and $cacheResponse.Stashes) {
+                    $stashCount = $cacheResponse.Stashes.Length
+                }
 
-                    if ($settings.EnableStashStatus -and $cacheResponse.Stashes) {
-                        $stashCount = $cacheResponse.Stashes.Length
-                    }
-
-                    if ($cacheResponse.State) {
-                        $branch += "|" + $cacheResponse.State
-                    }
+                if ($cacheResponse.State) {
+                    $branch += "|" + $cacheResponse.State
                 }
             }
             else {

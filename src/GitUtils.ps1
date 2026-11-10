@@ -444,56 +444,98 @@ function script:Get-GitStatusInternal {
                 }
 
                 dbg 'Parsing status' $sw
-                switch -regex ($status) {
-                    '^(?<index>[^#])(?<working>.) (?<path1>.*?)(?: -> (?<path2>.*))?$' {
-                        if ($sw) { dbg "Status: $_" $sw }
 
-                        $path1 = $matches['path1']
+                # The status is parsed without a regular expression for every
+                # line, because that is slow in repositories with many changed
+                # files (see #314).
+                $branchPattern = [regex]::new('^## (?<branch>\S+?)(?:\.\.\.(?<upstream>\S+))?(?: \[(?:ahead (?<ahead>\d+))?(?:, )?(?:behind (?<behind>\d+))?(?<gone>gone)?\])?$')
+                $initialCommitPattern = [regex]::new('^## Initial commit on (?<branch>\S+)$')
 
-                        # Even with core.quotePath=false, paths with spaces are wrapped in ""
-                        # https://github.com/git/git/commit/dbfdc625a5aad10c47e3ffa446d0b92e341a7b44
-                        # https://github.com/git/git/commit/f3fc4a1b8680c114defd98ce6f2429f8946a5dc1
-                        if ($path1 -like '"*"') {
-                            $path1 = $path1.Substring(1, $path1.Length - 2)
+                foreach ($line in $status) {
+                    if ($line.Length -lt 3) { continue }
+
+                    if ($line[0] -eq '#') {
+                        # The line with the information about the branch.
+                        $match = $branchPattern.Match($line)
+                        if ($match.Success) {
+                            if ($sw) { dbg "Status: $line" $sw }
+
+                            $branch = $match.Groups['branch'].Value
+                            $upstream = $match.Groups['upstream'].Value
+                            $aheadBy = [int]$match.Groups['ahead'].Value
+                            $behindBy = [int]$match.Groups['behind'].Value
+                            $gone = [string]$match.Groups['gone'].Value -eq 'gone'
+                        }
+                        else {
+                            $match = $initialCommitPattern.Match($line)
+                            if ($match.Success) {
+                                if ($sw) { dbg "Status: $line" $sw }
+
+                                $branch = $match.Groups['branch'].Value
+                            }
+                            elseif ($sw) { dbg "Status: $line" $sw }
                         }
 
-                        switch ($matches['index']) {
-                            'A' { $null = $indexAdded.Add($path1); break }
-                            'M' { $null = $indexModified.Add($path1); break }
-                            'R' { $null = $indexModified.Add($path1); break }
-                            'C' { $null = $indexModified.Add($path1); break }
-                            'D' { $null = $indexDeleted.Add($path1); break }
-                            'U' { $null = $indexUnmerged.Add($path1); break }
-                        }
-                        switch ($matches['working']) {
-                            '?' { $null = $filesAdded.Add($path1); break }
-                            'A' { $null = $filesAdded.Add($path1); break }
-                            'M' { $null = $filesModified.Add($path1); break }
-                            'D' { $null = $filesDeleted.Add($path1); break }
-                            'U' { $null = $filesUnmerged.Add($path1); break }
-                        }
                         continue
                     }
 
-                    '^## (?<branch>\S+?)(?:\.\.\.(?<upstream>\S+))?(?: \[(?:ahead (?<ahead>\d+))?(?:, )?(?:behind (?<behind>\d+))?(?<gone>gone)?\])?$' {
-                        if ($sw) { dbg "Status: $_" $sw }
-
-                        $branch = $matches['branch']
-                        $upstream = $matches['upstream']
-                        $aheadBy = [int]$matches['ahead']
-                        $behindBy = [int]$matches['behind']
-                        $gone = [string]$matches['gone'] -eq 'gone'
+                    # The line with the status of a file: the status of the
+                    # index, the status of the working tree and the path of
+                    # the file.
+                    if ($line[2] -ne ' ') {
+                        if ($sw) { dbg "Status: $line" $sw }
                         continue
                     }
 
-                    '^## Initial commit on (?<branch>\S+)$' {
-                        if ($sw) { dbg "Status: $_" $sw }
+                    $index = $line[0]
+                    $working = $line[1]
+                    $path1 = $line.Substring(3)
 
-                        $branch = $matches['branch']
-                        continue
+                    # A renamed file is reported as "old -> new".
+                    $renameIndex = $path1.IndexOf(' -> ')
+                    if ($renameIndex -ge 0) {
+                        $path1 = $path1.Substring(0, $renameIndex)
                     }
 
-                    default { if ($sw) { dbg "Status: $_" $sw } }
+                    # Even with core.quotePath=false, paths with spaces are wrapped in ""
+                    # https://github.com/git/git/commit/dbfdc625a5aad10c47e3ffa446d0b92e341a7b44
+                    # https://github.com/git/git/commit/f3fc4a1b8680c114defd98ce6f2429f8946a5dc1
+                    if ($path1.Length -gt 1 -and $path1[0] -eq '"' -and $path1[$path1.Length - 1] -eq '"') {
+                        $path1 = $path1.Substring(1, $path1.Length - 2)
+                    }
+
+                    if ($index -eq 'A' -or $index -eq 'M' -or $index -eq 'R' -or $index -eq 'C' -or $index -eq 'D' -or $index -eq 'U') {
+                        if ($index -eq 'A') {
+                            $null = $indexAdded.Add($path1)
+                        }
+                        elseif ($index -eq 'D') {
+                            $null = $indexDeleted.Add($path1)
+                        }
+                        elseif ($index -eq 'U') {
+                            $null = $indexUnmerged.Add($path1)
+                        }
+                        else {
+                            $null = $indexModified.Add($path1)
+                        }
+                    }
+
+                    if ($working -eq '?' -or $working -eq 'A' -or $working -eq 'M' -or $working -eq 'D' -or $working -eq 'U') {
+                        if ($working -eq '?') {
+                            $null = $filesAdded.Add($path1)
+                        }
+                        elseif ($working -eq 'A') {
+                            $null = $filesAdded.Add($path1)
+                        }
+                        elseif ($working -eq 'D') {
+                            $null = $filesDeleted.Add($path1)
+                        }
+                        elseif ($working -eq 'U') {
+                            $null = $filesUnmerged.Add($path1)
+                        }
+                        else {
+                            $null = $filesModified.Add($path1)
+                        }
+                    }
                 }
             }
         }

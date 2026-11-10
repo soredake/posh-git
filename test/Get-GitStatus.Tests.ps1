@@ -438,6 +438,46 @@ U  test/Unmerged.Tests.ps1
             $status.Index.Modified[2] | Should -Be "test/Modified.Tests.ps1"
             $status.Index.Unmerged[0] | Should -Be "test/Unmerged.Tests.ps1"
         }
+        It 'Parses a status with many changed files' {
+            # The status of a repository with many changed files is parsed
+            # without a regular expression for every line, so that the prompt
+            # does not take a long time to appear (#314).
+            $manyFiles = 1..2000 | ForEach-Object { " M test/Modified$_.Tests.ps1" }
+
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines ((@(
+                    '## master'
+                ) + $manyFiles) -join "`n")
+            }
+
+            $status = Get-GitStatus
+            $status.Branch | Should -Be 'master'
+            $status.Working.Modified.Count | Should -Be 2000
+            $status.Working.Modified[0] | Should -Be 'test/Modified1.Tests.ps1'
+            $status.Working.Modified[1999] | Should -Be 'test/Modified2000.Tests.ps1'
+        }
+        It 'Parses a path that contains a space' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+## master
+ M "test/Modified File.Tests.ps1"
+'@
+            }
+
+            $status = Get-GitStatus
+            $status.Working.Modified.Count | Should -Be 1
+            $status.Working.Modified[0] | Should -Be 'test/Modified File.Tests.ps1'
+        }
     }
 
     Context 'Branch progress suffix' {

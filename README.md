@@ -334,6 +334,10 @@ working tree can be shown one prompt later. The branch is always read from Git, 
 background status before it falls back to the last known status. Increase the value if the status of your repositories
 is usually computed quickly, decrease it if the prompt should never wait.
 
+Note on performance: In a repository with a lot of changed files, the status takes a while to be computed, because
+every changed file has to be read and parsed. Enable the background status in that case, so that the prompt does not
+wait for the status.
+
 ### Using the Git status cache
 
 `$GitPromptSettings.EnableFileStatusFromCache` controls whether posh-git asks the

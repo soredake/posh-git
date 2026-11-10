@@ -175,12 +175,29 @@ function script:gitTags($filter, $prefix = '') {
         quoteStringWithSpecialChars
 }
 
+<#
+.SYNOPSIS
+    Gets the names of the branches of a git flow branch type.
+.DESCRIPTION
+    Git flow expects the name of a branch without the prefix of the branch
+    type, e.g. "git flow release finish 1.2.0" refers to the branch
+    "release/1.2.0" and git flow adds the prefix itself. The names are
+    therefore completed without the prefix.
+#>
 function script:gitFeatures($filter, $command) {
-    $featurePrefix = git config --local --get "gitflow.prefix.$command"
-    $branches = @(git branch --no-color | ForEach-Object { if ($_ -match "^\*?\s*$featurePrefix(?<ref>.*)") { $matches['ref'] } })
+    # The prefix is looked up the same way as git flow does it, so that a
+    # prefix that is not set for the repository is found as well.
+    $featurePrefix = git config --get "gitflow.prefix.$command"
+
+    # The user may have typed the prefix as well. The completion does not
+    # contain the prefix, so it is not needed to match the filter.
+    if ($featurePrefix -and $filter.StartsWith($featurePrefix)) {
+        $filter = $filter.Substring($featurePrefix.Length)
+    }
+
+    $branches = @(git branch --no-color | ForEach-Object { if ($_ -match "^\*?\s*$([regex]::Escape($featurePrefix))(?<ref>.*)") { $matches['ref'] } })
     $branches |
         Where-Object { $_ -ne '(no branch)' -and $_ -like "$filter*" } |
-        ForEach-Object { $featurePrefix + $_ } |
         quoteStringWithSpecialChars
 }
 

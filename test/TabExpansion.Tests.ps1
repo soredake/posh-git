@@ -357,6 +357,9 @@ Describe 'TabExpansion Tests' {
         BeforeAll {
             [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]
             $repoPath = NewGitTempRepo -MakeInitialCommit
+            # Make sure that the result does not depend on a prefix that is
+            # configured for the machine the tests are running on.
+            &$gitbin config gitflow.prefix.feature ''
         }
         AfterAll {
             RemoveGitTempRepo $repoPath
@@ -414,6 +417,40 @@ Describe 'TabExpansion Tests' {
 
             $result = & $module GitTabExpansionInternal 'git add ' $gitStatus
             $result | Should -BeExactly $fileName
+        }
+    }
+
+    Context 'Git Flow TabCompletion Tests' {
+        BeforeAll {
+            [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]
+            $repoPath = NewGitTempRepo -MakeInitialCommit
+            &$gitbin config gitflow.prefix.release 'release/'
+            &$gitbin config gitflow.prefix.feature 'feature/'
+            &$gitbin branch 'release/1.23.0' 2>$null
+            &$gitbin branch 'feature/my-feature' 2>$null
+        }
+        AfterAll {
+            RemoveGitTempRepo $repoPath
+        }
+        It 'Tab completes the name of a release branch without the prefix' {
+            $result = & $module GitTabExpansionInternal 'git flow release finish 1.'
+
+            $result | Should -BeExactly '1.23.0'
+        }
+        It 'Tab completes the name of a feature branch without the prefix' {
+            $result = & $module GitTabExpansionInternal 'git flow feature finish my'
+
+            $result | Should -BeExactly 'my-feature'
+        }
+        It 'Tab completes the name of a branch when the prefix has been typed' {
+            $result = & $module GitTabExpansionInternal 'git flow release finish release/1.'
+
+            $result | Should -BeExactly '1.23.0'
+        }
+        It 'Does not complete the branches of another branch type' {
+            $result = & $module GitTabExpansionInternal 'git flow feature finish 1.'
+
+            $result | Should -BeNullOrEmpty
         }
     }
 }

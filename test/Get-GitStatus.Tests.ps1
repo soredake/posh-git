@@ -598,6 +598,76 @@ U  test/Unmerged.Tests.ps1
         }
     }
 
+    Context 'Git Status Command Tests' {
+        BeforeAll {
+            Set-Location $PSScriptRoot
+        }
+
+        It 'Lets Git update the index when the status is computed' {
+            $global:capturedGitArgs = @()
+
+            Mock -ModuleName posh-git git {
+                $global:capturedGitArgs = @($args)
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+## master
+'@
+            }
+
+            try {
+                Get-GitStatus
+            }
+            finally {
+                $capturedArgs = $global:capturedGitArgs
+                Remove-Variable -Name capturedGitArgs -Scope Global -ErrorAction SilentlyContinue
+            }
+
+            # Git has to be able to refresh the index. Otherwise it has to
+            # compare the content of every file on every call, which is very
+            # slow for repositories with large files that are processed by a
+            # clean filter (e.g. Git LFS).
+            $capturedArgs | Should -Contain 'status'
+            $capturedArgs | Should -Not -Contain '--no-optional-locks'
+        }
+
+        It 'Does not let Git update the index when AutoRefreshIndex is disabled' {
+            $global:capturedGitArgs = @()
+
+            Mock -ModuleName posh-git git {
+                $global:capturedGitArgs = @($args)
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+## master
+'@
+            }
+
+            try {
+                $GitPromptSettings.AutoRefreshIndex = $false
+                try {
+                    Get-GitStatus
+                }
+                finally {
+                    $GitPromptSettings.AutoRefreshIndex = $true
+                }
+            }
+            finally {
+                $capturedArgs = $global:capturedGitArgs
+                Remove-Variable -Name capturedGitArgs -Scope Global -ErrorAction SilentlyContinue
+            }
+
+            $capturedArgs | Should -Contain 'status'
+            $capturedArgs | Should -Contain '--no-optional-locks'
+        }
+    }
+
     Context 'In .git' {
         BeforeEach {
             [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]

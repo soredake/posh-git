@@ -267,12 +267,31 @@ function script:Get-GitStatusArguments($settings) {
         default { $untrackedFilesOption = "-unormal" }
     }
 
-    @(
-        '--no-optional-locks',
+    # Whether Git is allowed to refresh the index is controlled by the
+    # AutoRefreshIndex setting.
+    #
+    # When Git is allowed to update the index, it refreshes the stat
+    # information of the files in the index. Without that refresh, Git
+    # considers the files to be "racily clean" and has to compare the content
+    # of the files with the content in the index on every single call. That is
+    # very slow for repositories that contain large files that are processed by
+    # a clean filter (e.g. Git LFS), because the filter has to process the
+    # whole file every time.
+    #
+    # '--no-optional-locks' prevents Git from refreshing the index, so it is
+    # only used when the index must not be written, e.g. because another tool is
+    # using the index at the same time.
+    $statusArgs = @(
         '-c', 'core.quotepath=false',
         '-c', 'color.status=false',
         'status', $untrackedFilesOption, '--short', '--branch'
     )
+
+    if (!$settings.AutoRefreshIndex) {
+        $statusArgs = @('--no-optional-locks') + $statusArgs
+    }
+
+    $statusArgs
 }
 
 function script:Get-GitStatusInternal {
@@ -409,6 +428,15 @@ function script:Get-GitStatusInternal {
                 else {
                     $statusArgs = script:Get-GitStatusArguments $settings
                     $status = Invoke-Utf8ConsoleCommand { git @statusArgs 2>$null }
+                    if (!$status -and $settings.AutoRefreshIndex) {
+                        # Git did not produce any output. This usually means that
+                        # it could not refresh the index, e.g. because another
+                        # Git process holds the index lock. Retry without
+                        # refreshing the index so that the status is still
+                        # available.
+                        dbg 'Retrying the status without refreshing the index' $sw
+                        $status = Invoke-Utf8ConsoleCommand { git --no-optional-locks @statusArgs 2>$null }
+                    }
                 }
                 if ($settings.EnableStashStatus) {
                     dbg 'Getting stash count' $sw

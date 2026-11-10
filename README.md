@@ -321,6 +321,13 @@ read from Git.
 If the cache is enabled but the cache service is not running, posh-git falls back to reading the status from Git
 instead of showing `CACHE ERROR` in the prompt.
 
+Note on performance: When posh-git asks Git for the status of the repository, Git normally refreshes the index, i.e.
+it updates the cached information about the state of the files in the working tree. Without that refresh, Git has to
+compare the content of the files with the content in the index on every call, which is very slow for repositories that
+contain large files that are processed by a clean filter (e.g. Git LFS), because the filter has to process the whole
+file every time. posh-git therefore lets Git refresh the index by default. Set `$GitPromptSettings.AutoRefreshIndex =
+$false` if Git should not write the index, e.g. because another tool is using it at the same time.
+
 ## Customizing the posh-git prompt
 
 When you import the posh-git module, it will replace PowerShell's default prompt function with a new prompt function.

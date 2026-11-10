@@ -101,10 +101,21 @@ $script:GitProxyFunctionRegex = "(^|[;`n])(\s*)(?<cmd>$(Get-AliasPattern git))(?
     Finding out whether Git has the 'flow' command requires running Git, which
     makes the import of the module slower. The list of the commands is
     therefore completed when it is used for the first time.
+
+    The extensions of Git can be provided when the module is imported, so that
+    Git does not have to be asked for them at all.
 #>
 function script:Initialize-GitCommands {
     if ($script:GitCommandsInitialized) { return }
     $script:GitCommandsInitialized = $true
+
+    $extensions = $script:InitProps['LocalGitExtensions']
+    if ($extensions) {
+        if ($extensions['flow']) {
+            $script:someCommands += 'flow'
+        }
+        return
+    }
 
     try {
         if ($null -ne (git help -a 2>&1 | Select-String flow)) {

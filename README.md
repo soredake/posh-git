@@ -204,6 +204,37 @@ If you want posh-git to detect your own aliases for git, then you *must* have se
 So if you have `Set-Alias g git` then ensure it is executed before `Import-Module posh-git`, and `g checkout` will
 complete as if you'd typed `git`.
 
+### Step 3: Speed up the import of the module
+
+Importing posh-git runs Git to find out its version and to find out whether it has the extensions that are used for the
+tab completion. Running Git is not always fast, e.g. when the machine is scanned by a virus scanner or when Git is
+looked up in a long `PATH`. The properties that posh-git needs can be provided before the module is imported, so that
+Git does not have to be asked for them:
+
+```powershell
+$global:PoshGit_InitProps = @{
+    # Do not install the prompt of posh-git, e.g. when another tool provides it.
+    DisablePoshGitPrompt = $true
+
+    # The version of Git, so that Git is not asked for it.
+    LocalGitVersion = [System.Version]'2.39.2'
+
+    # The extensions of Git, so that Git is not asked for them.
+    LocalGitExtensions = @{ flow = $true }
+}
+
+Import-Module posh-git
+```
+
+| Property | Description |
+|----------|-------------|
+| `DisablePoshGitPrompt` | When `$true`, the prompt function of posh-git is not installed. The other functions of posh-git are still available. |
+| `LocalGitVersion` | The version of Git, e.g. `[System.Version]'2.39.2'`. Git is not asked for its version when it is provided. |
+| `LocalGitExtensions` | The extensions of Git that are used for the tab completion, e.g. `@{ flow = $true }`. Git is not asked for them when they are provided. |
+
+Note that the version of the Git distribution cannot be checked when `LocalGitVersion` is provided, so that the warning
+about an unsupported Git distribution is not written then.
+
 ## Git status summary information
 
 The Git status summary information provides a wealth of "Git status" information at a glance, all the time in your

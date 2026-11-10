@@ -5,6 +5,28 @@ if (Test-Path Env:\POSHGIT_ENABLE_STRICTMODE) {
     Set-StrictMode -Version Latest
 }
 
+# The properties that are used to initialize the module can be set before the
+# module is imported. They make it possible to avoid running Git when the
+# module is imported, which makes the import significantly faster.
+#
+#   $global:PoshGit_InitProps = @{
+#       DisablePoshGitPrompt = $true
+#       LocalGitVersion      = [System.Version]'2.39.2'
+#       LocalGitExtensions   = @{ flow = $true }
+#   }
+#
+$script:InitProps = @{}
+$poshGitInitProps = Get-Variable -Name PoshGit_InitProps -Scope Global -ErrorAction SilentlyContinue
+if ($poshGitInitProps -and $poshGitInitProps.Value -is [System.Collections.IDictionary]) {
+    foreach ($key in $poshGitInitProps.Value.Keys) {
+        $script:InitProps[$key] = $poshGitInitProps.Value[$key]
+    }
+}
+
+# The prompt of posh-git can be disabled, e.g. when another tool provides the
+# prompt. The prompt function is not installed then.
+$script:DisablePoshGitPrompt = [bool]$script:InitProps['DisablePoshGitPrompt']
+
 . $PSScriptRoot\CheckRequirements.ps1 > $null
 
 . $PSScriptRoot\ConsoleMode.ps1
@@ -133,13 +155,13 @@ if ($currentPromptDef -and (($currentPromptDef.Trim() -replace '[\r\n\t]+\s*',';
     $currentPromptDef = $null
 }
 
-if (!$currentPromptDef) {
+if (!$currentPromptDef -and !$script:DisablePoshGitPrompt) {
     # HACK: If prompt is missing, create a global one we can overwrite with Set-Item
     function global:prompt { ' ' }
 }
 
 # If there is no prompt function or the prompt function is the default, replace the current prompt function definition
-if ($ForcePoshGitPrompt -or !$currentPromptDef -or ($currentPromptDef -eq $defaultPromptDef)) {
+if (!$script:DisablePoshGitPrompt -and ($ForcePoshGitPrompt -or !$currentPromptDef -or ($currentPromptDef -eq $defaultPromptDef))) {
     # Set the posh-git prompt as the default prompt
     Set-Item Function:\prompt -Value $GitPromptScriptBlock
 }

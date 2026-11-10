@@ -268,6 +268,17 @@ class PoshGitPromptSettings {
     [bool]$ShowStatusWhenZero    = $true
     [bool]$AutoRefreshIndex      = $true
 
+    # When enabled, the status of the repository is computed by a background
+    # process, so that the prompt does not have to wait for Git. The prompt
+    # keeps showing the last known status while the next status is computed,
+    # which means that changes to the working tree can be shown one prompt
+    # later.
+    [bool]$EnableBackgroundStatus = $false
+
+    # The number of milliseconds the prompt waits for the background status
+    # to be computed before it falls back to the last known status.
+    [int]$BackgroundStatusTimeout = 100
+
     [UntrackedFilesMode]$UntrackedFilesMode = [UntrackedFilesMode]::Default
 
     [bool]$EnablePromptStatus    = !$global:GitMissing

@@ -12,6 +12,7 @@ if (Test-Path Env:\POSHGIT_ENABLE_STRICTMODE) {
 . $PSScriptRoot\AnsiUtils.ps1
 . $PSScriptRoot\WindowTitle.ps1
 . $PSScriptRoot\PoshGitTypes.ps1
+. $PSScriptRoot\BackgroundStatus.ps1
 . $PSScriptRoot\GitUtils.ps1
 . $PSScriptRoot\GitPrompt.ps1
 . $PSScriptRoot\GitParamTabExpansion.ps1
@@ -148,6 +149,9 @@ $ExecutionContext.SessionState.Module.OnRemove = {
     $global:VcsPromptStatuses = $global:VcsPromptStatuses | Where-Object { $_ -ne $PoshGitVcsPrompt }
 
     Reset-WindowTitle
+
+    # Stop the background status computation, if there is one running.
+    Stop-BackgroundGitStatus
 
     # Check if the posh-git prompt function itself has been replaced. If so, do not restore the prompt function
     $promptDef = if ($funcInfo = Get-Command prompt -ErrorAction SilentlyContinue) { $funcInfo.Definition }

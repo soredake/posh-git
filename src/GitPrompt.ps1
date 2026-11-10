@@ -914,7 +914,31 @@ function Global:Write-VcsStatus {
 # Add scriptblock that will execute for Write-VcsStatus
 $PoshGitVcsPrompt = {
     try {
-        $global:GitStatus = Get-GitStatus
+        $status = $null
+
+        if ($global:GitPromptSettings.EnableBackgroundStatus) {
+            # Try to get the status that is computed in the background. This
+            # keeps the prompt fast even for repositories where computing the
+            # status is slow.
+            $status = Get-BackgroundGitStatus -TimeoutMilliseconds $global:GitPromptSettings.BackgroundStatusTimeout
+
+            if (!$status -and $global:GitStatus) {
+                # The status is not available yet. Use the status of the
+                # previous prompt, but make sure that it still belongs to the
+                # repository and that the branch is up to date.
+                $gitDir = Get-GitDirectory
+                if ($gitDir -and $global:GitStatus.GitDir -eq $gitDir) {
+                    $status = $global:GitStatus
+                    $status.Branch = Get-GitBranch -GitDir $gitDir
+                }
+            }
+        }
+
+        if (!$status) {
+            $status = Get-GitStatus
+        }
+
+        $global:GitStatus = $status
         Write-GitStatus $GitStatus
     }
     catch {

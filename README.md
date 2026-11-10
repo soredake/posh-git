@@ -285,6 +285,24 @@ Note on performance: Displaying file status in the git prompt for a very large r
 Rather than turn off file status entirely (`$GitPromptSettings.EnableFileStatus = $false`), you can disable it on a
 repo-by-repo basis by adding individual repository paths to `$GitPromptSettings.RepositoriesInWhichToDisableFileStatus`.
 
+### Computing the status in the background
+
+`$GitPromptSettings.EnableBackgroundStatus` makes posh-git compute the status of the repository in a background
+process instead of waiting for Git to compute it. This keeps the prompt responsive in repositories where computing
+the status is slow, e.g. very large repositories or repositories that contain large files that have to be checked by
+a clean filter like the one of Git LFS.
+
+```powershell
+$GitPromptSettings.EnableBackgroundStatus = $true
+```
+
+While the status is being computed, the prompt keeps showing the last known status. This means that changes to the
+working tree can be shown one prompt later. The branch is always read from Git, so it is never out of date.
+
+`$GitPromptSettings.BackgroundStatusTimeout` (default: 100 milliseconds) controls how long the prompt waits for the
+background status before it falls back to the last known status. Increase the value if the status of your repositories
+is usually computed quickly, decrease it if the prompt should never wait.
+
 ### Using the Git status cache
 
 `$GitPromptSettings.EnableFileStatusFromCache` controls whether posh-git asks the

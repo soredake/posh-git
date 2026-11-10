@@ -250,6 +250,51 @@ function Get-GitStatus {
         $Force
     )
 
+    Get-GitStatusInternal -GitDir $GitDir -Force:$Force
+}
+
+<#
+.SYNOPSIS
+    Gets the arguments used to ask Git for the status of the repository.
+.DESCRIPTION
+    The arguments are used both when Git is asked directly and when the status
+    is computed by a background process, so that both produce the same output.
+#>
+function script:Get-GitStatusArguments($settings) {
+    switch ($settings.UntrackedFilesMode) {
+        "No" { $untrackedFilesOption = "-uno" }
+        "All" { $untrackedFilesOption = "-uall" }
+        default { $untrackedFilesOption = "-unormal" }
+    }
+
+    @(
+        '--no-optional-locks',
+        '-c', 'core.quotepath=false',
+        '-c', 'color.status=false',
+        'status', $untrackedFilesOption, '--short', '--branch'
+    )
+}
+
+function script:Get-GitStatusInternal {
+    param(
+        # The path of a directory within a Git repository that you want to get
+        # the Git status.
+        [Parameter(Position = 0)]
+        $GitDir = (Get-GitDirectory),
+
+        # If specified, overrides $GitPromptSettings.EnableFileStatus and
+        # $GitPromptSettings.EnablePromptStatus when they are set to $false.
+        [Parameter()]
+        [switch]
+        $Force,
+
+        # The output of a previous 'git status' call. When it is specified,
+        # Git is not asked for the status again.
+        [Parameter()]
+        [string]
+        $StatusText
+    )
+
     $settings = if ($global:GitPromptSettings) { $global:GitPromptSettings } else { [PoshGitPromptSettings]::new() }
 
     $promptStatusEnabled = $Force -or $settings.EnablePromptStatus
@@ -356,12 +401,15 @@ function Get-GitStatus {
             }
             else {
                 dbg 'Getting status' $sw
-                switch ($settings.UntrackedFilesMode) {
-                    "No" { $untrackedFilesOption = "-uno" }
-                    "All" { $untrackedFilesOption = "-uall" }
-                    default { $untrackedFilesOption = "-unormal" }
+                if ($StatusText) {
+                    # The status has already been computed (e.g. by a background
+                    # process), so use it instead of asking Git again.
+                    $status = $StatusText -split "`r?`n"
                 }
-                $status = Invoke-Utf8ConsoleCommand { git --no-optional-locks '-c' core.quotepath=false '-c' color.status=false status $untrackedFilesOption --short --branch 2>$null }
+                else {
+                    $statusArgs = script:Get-GitStatusArguments $settings
+                    $status = Invoke-Utf8ConsoleCommand { git @statusArgs 2>$null }
+                }
                 if ($settings.EnableStashStatus) {
                     dbg 'Getting stash count' $sw
                     $stashCount = $null | git --no-optional-locks stash list 2>$null | measure-object | Select-Object -expand Count
@@ -463,6 +511,51 @@ function Get-GitStatus {
         if ($sw) { $sw.Stop() }
         return $result
     }
+}
+
+<#
+.SYNOPSIS
+    Gets the Git status of the current repository, computed in the background.
+.DESCRIPTION
+    Starts the computation of the Git status in a background process and waits
+    at most TimeoutMilliseconds for it to complete. $null is returned when the
+    status is not available in time, in which case the caller should fall back
+    to the status it already knows about.
+#>
+function script:Get-BackgroundGitStatus {
+    param(
+        [Parameter()]
+        [int]
+        $TimeoutMilliseconds = 100
+    )
+
+    $settings = $global:GitPromptSettings
+    if (!$settings) { return $null }
+
+    $gitDir = Get-GitDirectory
+    if (!$gitDir) { return $null }
+
+    $currentDirectory = $ExecutionContext.SessionState.Path.CurrentLocation.ProviderPath
+
+    $state = $script:BgStatus
+    if (!$state -or $state.Completed) {
+        # No status is being computed, so start a new computation. It is
+        # started after the last command has run, so that the status reflects
+        # the current state of the repository.
+        Start-BackgroundGitStatus -Directory $currentDirectory -Arguments (Get-GitStatusArguments $settings)
+        $state = $script:BgStatus
+    }
+
+    if (!$state) { return $null }
+
+    $text = Wait-BackgroundGitStatus -TimeoutMilliseconds $TimeoutMilliseconds
+    if (!$text) { return $null }
+
+    # The status is only valid when it was computed for the directory the
+    # prompt is currently rendered for.
+    if ($state.Directory -ne $currentDirectory) { return $null }
+
+    Get-GitStatusInternal -GitDir $gitDir -StatusText $text
 }
 
 function InDisabledRepository {

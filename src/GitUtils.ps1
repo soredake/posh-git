@@ -440,7 +440,12 @@ function script:Get-GitStatusInternal {
                 }
                 if ($settings.EnableStashStatus) {
                     dbg 'Getting stash count' $sw
-                    $stashCount = $null | git --no-optional-locks stash list 2>$null | measure-object | Select-Object -expand Count
+
+                    # The stashes are the entries of the reflog of refs/stash.
+                    # The reflog is read directly, because 'git stash list' is
+                    # not a Git command but a script that runs 'git log' for the
+                    # reflog, which is slow to start (#459).
+                    $stashCount = $null | git --no-optional-locks log -g --format=%H refs/stash 2>$null | measure-object | Select-Object -expand Count
                 }
 
                 dbg 'Parsing status' $sw

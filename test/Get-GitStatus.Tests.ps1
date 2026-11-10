@@ -708,6 +708,45 @@ U  test/Unmerged.Tests.ps1
         }
     }
 
+    Context 'Stash Status Tests' {
+        BeforeAll {
+            [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]
+            $repoPath = NewGitTempRepo -MakeInitialCommit
+        }
+        AfterAll {
+            RemoveGitTempRepo $repoPath
+        }
+        AfterEach {
+            &$gitbin stash clear *>$null
+        }
+        It 'Returns the number of stashes' {
+            'change' | Out-File ./file.txt -Encoding ascii
+            &$gitbin add ./file.txt *>$null
+            &$gitbin stash push -m 'test stash' *>$null
+
+            $GitPromptSettings.EnableStashStatus = $true
+            try {
+                $status = Get-GitStatus
+            }
+            finally {
+                $GitPromptSettings.EnableStashStatus = $false
+            }
+
+            $status.StashCount | Should -Be 1
+        }
+        It 'Returns no stashes when there are none' {
+            $GitPromptSettings.EnableStashStatus = $true
+            try {
+                $status = Get-GitStatus
+            }
+            finally {
+                $GitPromptSettings.EnableStashStatus = $false
+            }
+
+            $status.StashCount | Should -Be 0
+        }
+    }
+
     Context 'In .git' {
         BeforeEach {
             [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]

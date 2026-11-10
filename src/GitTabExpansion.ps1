@@ -9,6 +9,11 @@ $Global:GitTabSettings = New-Object PSObject -Property @{
     EnableLogging = $false
     LogPath = Join-Path ([System.IO.Path]::GetTempPath()) posh-git_tabexp.log
     RegisteredCommands = ""
+
+    # Whether the branches of the remotes are offered when a branch name is
+    # completed. Disabling this also avoids asking Git for the remote
+    # branches, which can be slow in repositories with many of them.
+    EnableRemoteBranchCompletion = $true
 }
 
 $subcommands = @{
@@ -136,8 +141,14 @@ function script:gitBranches($filter, $includeHEAD = $false, $prefix = '') {
         $filter = $matches['to']
     }
 
+    # The branches of the remotes are only completed when they are wanted.
+    $remoteBranches = @()
+    if ($Global:GitTabSettings.EnableRemoteBranchCompletion) {
+        $remoteBranches = @(git branch --no-color -r | ForEach-Object { if ($_ -match "^  (?<ref>\S+)(?: -> .+)?") { $matches['ref'] } })
+    }
+
     $branches = @(git branch --no-color | ForEach-Object { if (($_ -notmatch "^\* \(HEAD detached .+\)$") -and ($_ -match "^[\*\+]?\s*(?<ref>\S+)(?: -> .+)?")) { $matches['ref'] } }) +
-                @(git branch --no-color -r | ForEach-Object { if ($_ -match "^  (?<ref>\S+)(?: -> .+)?") { $matches['ref'] } }) +
+                $remoteBranches +
                 @(if ($includeHEAD) { 'HEAD','FETCH_HEAD','ORIG_HEAD','MERGE_HEAD' })
 
     $branches |
@@ -147,6 +158,8 @@ function script:gitBranches($filter, $includeHEAD = $false, $prefix = '') {
 }
 
 function script:gitRemoteUniqueBranches($filter) {
+    if (!$Global:GitTabSettings.EnableRemoteBranchCompletion) { return }
+
     git branch --no-color -r |
         ForEach-Object { if ($_ -match "^  (?<remote>[^/]+)/(?<branch>\S+)(?! -> .+)?$") { $matches['branch'] } } |
         Group-Object -NoElement |

@@ -453,4 +453,42 @@ Describe 'TabExpansion Tests' {
             $result | Should -BeNullOrEmpty
         }
     }
+
+    Context 'Remote Branch Completion Tests' {
+        BeforeAll {
+            [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]
+            $repoPath = NewGitTempRepo -MakeInitialCommit
+            &$gitbin update-ref refs/remotes/origin/remote-branch master 2>$null
+        }
+        AfterAll {
+            RemoveGitTempRepo $repoPath
+        }
+        It 'Tab completes the branches of the remotes by default' {
+            $result = & $module GitTabExpansionInternal 'git checkout origin/remote-'
+
+            $result -contains 'origin/remote-branch' | Should -Be $true
+        }
+        It 'Does not complete the branches of the remotes when they are disabled' {
+            $Global:GitTabSettings.EnableRemoteBranchCompletion = $false
+            try {
+                $result = & $module GitTabExpansionInternal 'git checkout remote-'
+            }
+            finally {
+                $Global:GitTabSettings.EnableRemoteBranchCompletion = $true
+            }
+
+            $result | Should -BeNullOrEmpty
+        }
+        It 'Does not complete the unique branches of the remotes when they are disabled' {
+            $Global:GitTabSettings.EnableRemoteBranchCompletion = $false
+            try {
+                $result = & $module GitTabExpansionInternal 'git checkout remote-b'
+            }
+            finally {
+                $Global:GitTabSettings.EnableRemoteBranchCompletion = $true
+            }
+
+            $result | Should -BeNullOrEmpty
+        }
+    }
 }

@@ -328,6 +328,18 @@ contain large files that are processed by a clean filter (e.g. Git LFS), because
 file every time. posh-git therefore lets Git refresh the index by default. Set `$GitPromptSettings.AutoRefreshIndex =
 $false` if Git should not write the index, e.g. because another tool is using it at the same time.
 
+### Tab completion of remote branches
+
+`$GitTabSettings.EnableRemoteBranchCompletion` controls whether the branches of the remotes are offered when a branch
+name is completed, e.g. for `git checkout` and `git switch`. It is enabled by default.
+
+```powershell
+$GitTabSettings.EnableRemoteBranchCompletion = $false
+```
+
+When it is disabled, only the local branches are completed. posh-git also does not ask Git for the remote branches
+then, which makes the completion faster in repositories that have many of them.
+
 ## Customizing the posh-git prompt
 
 When you import the posh-git module, it will replace PowerShell's default prompt function with a new prompt function.

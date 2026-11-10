@@ -65,6 +65,9 @@ $script:someCommands = @('add','am','annotate','archive','bisect','blame','branc
                          'notes','prune','pull','push','rebase','reflog','remote','rerere','reset','restore','revert','rm',
                          'shortlog','show','stash','status','submodule','svn','switch','tag','whatchanged', 'worktree')
 
+# Set to $true when the list of the commands of Git has been completed.
+$script:GitCommandsInitialized = $false
+
 if ((($PSVersionTable.PSVersion.Major -eq 5) -or $IsWindows) -and ($script:GitVersion -ge [System.Version]'2.16.2')) {
     $script:someCommands += 'update-git-for-windows'
 }
@@ -91,13 +94,26 @@ $script:vstsCommandsWithLongParams = $longVstsParams.Keys -join '|'
 # End Anchor   ($|[|;`n])
 $script:GitProxyFunctionRegex = "(^|[;`n])(\s*)(?<cmd>$(Get-AliasPattern git))(?<params>(([^\S\r\n]|[^\S\r\n]``\r?\n)+\S+)*)(([^\S\r\n]|[^\S\r\n]``\r?\n)+\`$args)(\s|``\r?\n)*($|[|;`n])"
 
-try {
-    if ($null -ne (git help -a 2>&1 | Select-String flow)) {
-        $script:someCommands += 'flow'
+<#
+.SYNOPSIS
+    Completes the list of the commands of Git.
+.DESCRIPTION
+    Finding out whether Git has the 'flow' command requires running Git, which
+    makes the import of the module slower. The list of the commands is
+    therefore completed when it is used for the first time.
+#>
+function script:Initialize-GitCommands {
+    if ($script:GitCommandsInitialized) { return }
+    $script:GitCommandsInitialized = $true
+
+    try {
+        if ($null -ne (git help -a 2>&1 | Select-String flow)) {
+            $script:someCommands += 'flow'
+        }
     }
-}
-catch {
-    Write-Debug "Search for 'flow' in 'git help' output failed with error: $_"
+    catch {
+        Write-Debug "Search for 'flow' in 'git help' output failed with error: $_"
+    }
 }
 
 filter quoteStringWithSpecialChars {
@@ -111,6 +127,8 @@ filter quoteStringWithSpecialChars {
 }
 
 function script:gitCommands($filter, $includeAliases) {
+    Initialize-GitCommands
+
     $cmdList = @()
     if (-not $global:GitTabSettings.AllCommands) {
         $cmdList += $someCommands -like "$filter*"

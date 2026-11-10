@@ -1,6 +1,10 @@
 # Inspired by Mark Embling
 # http://www.markembling.info/view/my-ideal-powershell-prompt-with-git-integration
 
+# Set to $true once a warning about the missing Git status cache has been
+# written, so that the warning is only shown once per session.
+$script:GitStatusCacheUnavailableWarningWritten = $false
+
 <#
 .SYNOPSIS
     Gets the path to the current repository's .git dir.
@@ -276,10 +280,30 @@ function Get-GitStatus {
                 $settings.EnableFileStatusFromCache = $null -ne (Get-Module GitStatusCachePoshClient)
             }
 
-            if ($settings.EnableFileStatusFromCache) {
-                dbg 'Getting status from cache' $sw
-                $cacheResponse = Get-GitStatusFromCache
+            $useFileStatusCache = [bool]$settings.EnableFileStatusFromCache
 
+            if ($useFileStatusCache) {
+                dbg 'Getting status from cache' $sw
+                try {
+                    $cacheResponse = Get-GitStatusFromCache
+                }
+                catch [System.Management.Automation.CommandNotFoundException] {
+                    # The Get-GitStatusFromCache command is provided by the
+                    # GitStatusCachePoshClient module. If that module is not
+                    # available, there is no cache to ask, so fall back to asking
+                    # Git directly instead of failing with
+                    # "The term 'Get-GitStatusFromCache' is not recognized".
+                    dbg "The Git status cache is not available: $_" $sw
+                    $useFileStatusCache = $false
+
+                    if (!$script:GitStatusCacheUnavailableWarningWritten) {
+                        $script:GitStatusCacheUnavailableWarningWritten = $true
+                        Write-Warning 'The GitStatusCachePoshClient module is not available, so the Git status cache cannot be used. Install and import the module to enable the cache, or set $GitPromptSettings.EnableFileStatusFromCache = $false to hide this warning.'
+                    }
+                }
+            }
+
+            if ($useFileStatusCache) {
                 if ($cacheResponse.Error) {
                     # git-status-cache failed; set $global:GitStatusCacheLoggingEnabled = $true, call Restart-GitStatusCache,
                     # and check %temp%\GitStatusCache_[timestamp].log for details.

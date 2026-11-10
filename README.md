@@ -285,6 +285,21 @@ Note on performance: Displaying file status in the git prompt for a very large r
 Rather than turn off file status entirely (`$GitPromptSettings.EnableFileStatus = $false`), you can disable it on a
 repo-by-repo basis by adding individual repository paths to `$GitPromptSettings.RepositoriesInWhichToDisableFileStatus`.
 
+### Using the Git status cache
+
+`$GitPromptSettings.EnableFileStatusFromCache` controls whether posh-git asks the
+[GitStatusCachePoshClient](https://github.com/cmarcusreid/git-status-cache) module for the status of the repository
+instead of running `git status` itself. The cache can make the prompt a lot faster in large repositories.
+
+| Value | Behavior |
+|-------|----------|
+| `$null` (default) | The cache is used when the `GitStatusCachePoshClient` module is loaded, otherwise the status is read from Git. |
+| `$true` | The cache is used. If the module is not available, posh-git writes a warning and falls back to reading the status from Git. |
+| `$false` | The cache is never used. The status is always read from Git. |
+
+Note that `EnableFileStatusFromCache` is only used to obtain the *file* status. The branch information is always
+read from Git.
+
 ## Customizing the posh-git prompt
 
 When you import the posh-git module, it will replace PowerShell's default prompt function with a new prompt function.

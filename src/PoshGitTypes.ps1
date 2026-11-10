@@ -273,6 +273,15 @@ class PoshGitPromptSettings {
     [bool]$EnablePromptStatus    = !$global:GitMissing
     [bool]$EnableFileStatus      = $true
 
+    # Controls the use of the Git status cache provided by the
+    # GitStatusCachePoshClient module.
+    #
+    #   $null (the default)  posh-git uses the cache when the
+    #                        GitStatusCachePoshClient module is loaded.
+    #   $true               the cache is used. If the module is not
+    #                        available, posh-git warns once and falls back
+    #                        to asking Git directly.
+    #   $false              the cache is never used.
     [Nullable[bool]]$EnableFileStatusFromCache        = $null
     [string[]]$RepositoriesInWhichToDisableFileStatus = @()
 

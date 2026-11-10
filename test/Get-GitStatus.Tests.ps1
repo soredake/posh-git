@@ -511,6 +511,52 @@ U  test/Unmerged.Tests.ps1
         }
     }
 
+    Context 'Git Status Cache Tests' {
+        BeforeAll {
+            Set-Location $PSScriptRoot
+        }
+
+        It 'Falls back to Git when the status cache is not available' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+## master
+?? test/Foo.Tests.ps1
+'@
+            }
+
+            # Simulate the GitStatusCachePoshClient module not being available.
+            function global:Get-GitStatusFromCache {
+                Get-ThisCommandDoesNotExist
+            }
+            try {
+                Mock -ModuleName posh-git Get-GitStatusFromCache {
+                    Get-ThisCommandDoesNotExist
+                }
+
+                $GitPromptSettings.EnableFileStatusFromCache = $true
+                try {
+                    $status = Get-GitStatus
+                }
+                finally {
+                    $GitPromptSettings.EnableFileStatusFromCache = $null
+                }
+            }
+            finally {
+                Remove-Item function:global:Get-GitStatusFromCache -ErrorAction SilentlyContinue
+            }
+
+            $status.Branch | Should -Be 'master'
+            $status.HasUntracked | Should -Be $true
+            $status.Working.Added.Count | Should -Be 1
+            $status.Working.Added[0] | Should -Be 'test/Foo.Tests.ps1'
+        }
+    }
+
     Context 'In .git' {
         BeforeEach {
             [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssigments', '')]

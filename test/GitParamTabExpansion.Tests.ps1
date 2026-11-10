@@ -45,6 +45,24 @@ Describe 'ParamsTabExpansion Tests' {
         }
     }
 
+    Context 'Rebase Parameters TabExpansion Tests' {
+        It 'Tab completes the rebase option that preserves merges' {
+            $result = & $module GitTabExpansionInternal 'git rebase --rebase'
+
+            $result -contains '--rebase-merges' | Should -Be $true
+        }
+        It 'Tab completes the rebase option that preserves merges (full name)' {
+            $result = & $module GitTabExpansionInternal 'git rebase --rebase-merges'
+
+            $result -contains '--rebase-merges' | Should -Be $true
+        }
+        It 'Does not suggest the deprecated preserve-merges option' {
+            $result = & $module GitTabExpansionInternal 'git rebase --preserve'
+
+            $result -notcontains '--preserve-merges' | Should -Be $true
+        }
+    }
+
     Context 'Pretty/Format TabCompletion Tests - No Custom Formats' {
         It 'Tab completes default formats for log --pretty' {
             $result = & $module GitTabExpansionInternal 'git log --pretty='

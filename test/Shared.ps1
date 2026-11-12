@@ -38,8 +38,10 @@ function global:git {
         '--version' { 'git version 2.16.2.windows.1' }
         'help' { Get-Content $PSScriptRoot\git-help.txt }
         default {
-            $res = Invoke-Expression "&$gitbin $cmdline"
-            $res
+            # The arguments are passed to Git as they are, so that arguments
+            # that contain characters that have a meaning in PowerShell, e.g.
+            # the format of 'git branch --format', are not interpreted.
+            & $gitbin @args
         }
     }
 }

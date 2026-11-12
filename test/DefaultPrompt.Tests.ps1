@@ -89,10 +89,11 @@ Describe 'Default Prompt Tests - NO ANSI' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
- D test/Bar.Tests.ps1
- M test/Baz.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Baz.Tests.ps1
 
 '@
             }
@@ -111,7 +112,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -130,7 +132,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -149,7 +152,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -170,7 +174,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -194,7 +199,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -298,10 +304,11 @@ Describe 'Default Prompt Tests - ANSI' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
- D test/Bar.Tests.ps1
- M test/Baz.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Baz.Tests.ps1
 
 '@
             }
@@ -320,7 +327,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -339,7 +347,8 @@ A  test/Foo.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 
 '@
             }
@@ -384,8 +393,9 @@ Describe 'Default Prompt WindowTitle Tests' -Skip:$SkipWindowTitleTests {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
 D test/Bar.Tests.ps1
 M test/Baz.Tests.ps1
 
@@ -488,8 +498,9 @@ M test/Baz.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
 D test/Bar.Tests.ps1
 M test/Baz.Tests.ps1
 

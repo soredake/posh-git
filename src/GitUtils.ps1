@@ -284,7 +284,7 @@ function script:Get-GitStatusArguments($settings) {
     $statusArgs = @(
         '-c', 'core.quotepath=false',
         '-c', 'color.status=false',
-        'status', $untrackedFilesOption, '--short', '--branch'
+        'status', $untrackedFilesOption, '--porcelain=v2', '--branch'
     )
 
     if (!$settings.AutoRefreshIndex) {
@@ -450,63 +450,120 @@ function script:Get-GitStatusInternal {
 
                 dbg 'Parsing status' $sw
 
+                # The status is read in the version 2 of the porcelain format,
+                # which is a machine readable format. Every line is either a
+                # header line that starts with '#' or an entry for a file:
+                #
+                #   1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                #   2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path><TAB><origPath>
+                #   u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+                #   ? <path>
+                #   ! <path>
+                #
+                # The fields are separated by a space, except for the path and
+                # the original path of a renamed file, which are separated by
+                # a tab. The path is not quoted, so that a path with special
+                # characters does not have to be unquoted.
+                #
                 # The status is parsed without a regular expression for every
                 # line, because that is slow in repositories with many changed
                 # files (see #314).
-                $branchPattern = [regex]::new('^## (?<branch>\S+?)(?:\.\.\.(?<upstream>\S+))?(?: \[(?:ahead (?<ahead>\d+))?(?:, )?(?:behind (?<behind>\d+))?(?<gone>gone)?\])?$')
-                $initialCommitPattern = [regex]::new('^## Initial commit on (?<branch>\S+)$')
+                $hasAheadBehind = $false
+
+                # Git writes one line per entry, but the status can also be a
+                # single string with all the lines in it.
+                if ($status -is [string]) {
+                    $status = $status -split "`r?`n"
+                }
 
                 foreach ($line in $status) {
-                    if ($line.Length -lt 3) { continue }
+                    if (!$line) { continue }
 
                     if ($line[0] -eq '#') {
-                        # The line with the information about the branch.
-                        $match = $branchPattern.Match($line)
-                        if ($match.Success) {
-                            if ($sw) { dbg "Status: $line" $sw }
+                        # A header line with the information about the branch,
+                        # e.g. "# branch.head main". The key starts after the
+                        # '#' and the space.
+                        $separator = $line.IndexOf(' ', 2)
+                        if ($separator -lt 0) { continue }
 
-                            $branch = $match.Groups['branch'].Value
-                            $upstream = $match.Groups['upstream'].Value
-                            $aheadBy = [int]$match.Groups['ahead'].Value
-                            $behindBy = [int]$match.Groups['behind'].Value
-                            $gone = [string]$match.Groups['gone'].Value -eq 'gone'
-                        }
-                        else {
-                            $match = $initialCommitPattern.Match($line)
-                            if ($match.Success) {
-                                if ($sw) { dbg "Status: $line" $sw }
+                        $key = $line.Substring(2, $separator - 2)
+                        $value = $line.Substring($separator + 1)
 
-                                $branch = $match.Groups['branch'].Value
+                        switch ($key) {
+                            'branch.head' {
+                                # The branch is "(detached)" when the HEAD is
+                                # detached. The branch is read from Git in that
+                                # case, because Git knows more about it.
+                                if ($value -ne '(detached)') {
+                                    $branch = $value
+                                }
                             }
-                            elseif ($sw) { dbg "Status: $line" $sw }
+                            'branch.upstream' {
+                                $upstream = $value
+                            }
+                            'branch.ab' {
+                                # The value is the number of commits that the
+                                # branch is ahead and behind, e.g. "+2 -1".
+                                $hasAheadBehind = $true
+
+                                $counts = $value -split ' '
+                                if ($counts.Count -ge 2) {
+                                    $aheadBy = [int]$counts[0].TrimStart('+')
+                                    $behindBy = [int]$counts[1].TrimStart('-')
+                                }
+                            }
                         }
 
                         continue
                     }
 
-                    # The line with the status of a file: the status of the
-                    # index, the status of the working tree and the path of
-                    # the file.
-                    if ($line[2] -ne ' ') {
-                        if ($sw) { dbg "Status: $line" $sw }
+                    # An entry for a file. The first field is the type of the
+                    # entry, the second field is the status of the index and
+                    # of the working tree. The fields are separated by a
+                    # space, the path is the last field and can contain
+                    # spaces.
+                    $type = $line[0]
+                    if ($type -eq '1') {
+                        # An ordinary changed entry. The path is the last
+                        # field, the fields before it are not used.
+                        $fields = $line -split ' ', 9
+                        $path1 = $fields[8]
+                        $index = $fields[1][0]
+                        $working = $fields[1][1]
+                    }
+                    elseif ($type -eq '2') {
+                        # A renamed or copied entry. The path of the file in
+                        # the index and the path of the file in the HEAD are
+                        # reported, separated by a tab. The path of the file
+                        # in the HEAD is used, because that is the file that
+                        # the file was renamed from.
+                        $fields = $line -split ' ', 10
+                        $paths = $fields[9] -split "`t"
+
+                        # The path of the file in the HEAD is the last field,
+                        # because the path of the file in the index can
+                        # contain a tab.
+                        $path1 = $paths[-1]
+                        $index = $fields[1][0]
+                        $working = $fields[1][1]
+                    }
+                    elseif ($type -eq 'u') {
+                        # An unmerged entry.
+                        $fields = $line -split ' ', 11
+                        $path1 = $fields[10]
+                        $index = $fields[1][0]
+                        $working = $fields[1][1]
+                    }
+                    elseif ($type -eq '?') {
+                        # An untracked file. The path is separated from the
+                        # type of the entry by a space.
+                        $path1 = $line.Substring(2)
+                        $index = ' '
+                        $working = '?'
+                    }
+                    else {
+                        # An ignored file, which is not asked for.
                         continue
-                    }
-
-                    $index = $line[0]
-                    $working = $line[1]
-                    $path1 = $line.Substring(3)
-
-                    # A renamed file is reported as "old -> new".
-                    $renameIndex = $path1.IndexOf(' -> ')
-                    if ($renameIndex -ge 0) {
-                        $path1 = $path1.Substring(0, $renameIndex)
-                    }
-
-                    # Even with core.quotePath=false, paths with spaces are wrapped in ""
-                    # https://github.com/git/git/commit/dbfdc625a5aad10c47e3ffa446d0b92e341a7b44
-                    # https://github.com/git/git/commit/f3fc4a1b8680c114defd98ce6f2429f8946a5dc1
-                    if ($path1.Length -gt 1 -and $path1[0] -eq '"' -and $path1[$path1.Length - 1] -eq '"') {
-                        $path1 = $path1.Substring(1, $path1.Length - 2)
                     }
 
                     if ($index -eq 'A' -or $index -eq 'M' -or $index -eq 'R' -or $index -eq 'C' -or $index -eq 'D' -or $index -eq 'U') {
@@ -542,6 +599,13 @@ function script:Get-GitStatusInternal {
                         }
                     }
                 }
+
+                # Git does not report a branch whose upstream is gone in the
+                # version 2 of the porcelain format. It reports the upstream,
+                # but not the number of commits that the branch is ahead or
+                # behind, because that number cannot be computed when the
+                # upstream does not exist.
+                $gone = $upstream -and !$hasAheadBehind
             }
         }
 

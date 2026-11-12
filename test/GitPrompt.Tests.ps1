@@ -11,8 +11,9 @@ Describe 'Write-VcsStatus Tests' {
                 return $res
             }
             Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
 D test/Bar.Tests.ps1
 M test/Baz.Tests.ps1
 

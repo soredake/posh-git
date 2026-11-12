@@ -17,7 +17,8 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding @'
-## rkeithill/more-status-tests
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head rkeithill/more-status-tests
 '@
             }
 
@@ -46,9 +47,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-?? test/Foo.Tests.ps1
-?? test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+? test/Foo.Tests.ps1
+? test/Bar.Tests.ps1
 '@
             }
 
@@ -72,9 +74,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- A test/Foo.Tests.ps1
- A test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 .A N... 000000 000000 100644 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 test/Foo.Tests.ps1
+1 .A N... 000000 000000 100644 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 test/Bar.Tests.ps1
 '@
             }
 
@@ -98,9 +101,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- D test/Foo.Tests.ps1
- D test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
 '@
             }
 
@@ -124,9 +128,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- M test/Foo.Tests.ps1
- M test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
 '@
             }
 
@@ -150,9 +155,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- U test/Foo.Tests.ps1
- U test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+u .U N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Foo.Tests.ps1
+u .U N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Bar.Tests.ps1
 '@
             }
 
@@ -176,12 +182,13 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- ? test/Untracked.Tests.ps1
- A test/Added.Tests.ps1
- D test/Deleted.Tests.ps1
- M test/Modified.Tests.ps1
- U test/Unmerged.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+? test/Untracked.Tests.ps1
+1 .A N... 000000 000000 100644 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 test/Added.Tests.ps1
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Deleted.Tests.ps1
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified.Tests.ps1
+u .U N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Unmerged.Tests.ps1
 '@
             }
 
@@ -209,9 +216,10 @@ Describe 'Get-GitStatus Tests' {
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Foo.Tests.ps1
-A  test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
 '@
             }
 
@@ -235,9 +243,10 @@ A  test/Bar.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-D  test/Foo.Tests.ps1
-D  test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 D. N... 100644 000000 000000 2222222222222222222222222222222222222222 0000000000000000000000000000000000000000 test/Foo.Tests.ps1
+1 D. N... 100644 000000 000000 2222222222222222222222222222222222222222 0000000000000000000000000000000000000000 test/Bar.Tests.ps1
 '@
             }
 
@@ -261,9 +270,10 @@ D  test/Bar.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-C  test/Foo.Tests.ps1
-C  test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+2 C. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 C100 test/Foo.Tests.ps1	test/Foo.Tests.ps1
+2 C. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 C100 test/Bar.Tests.ps1	test/Bar.Tests.ps1
 '@
             }
 
@@ -287,9 +297,10 @@ C  test/Bar.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-M  test/Foo.Tests.ps1
-M  test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 M. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Foo.Tests.ps1
+1 M. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Bar.Tests.ps1
 '@
             }
 
@@ -313,8 +324,9 @@ M  test/Bar.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-R  README.md -> README2.md
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+2 R. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 R100 README2.md	README.md
 '@
             }
 
@@ -337,9 +349,10 @@ R  README.md -> README2.md
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-U  test/Foo.Tests.ps1
-U  test/Bar.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+u U. N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Foo.Tests.ps1
+u U. N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Bar.Tests.ps1
 '@
             }
 
@@ -363,13 +376,14 @@ U  test/Bar.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Added.Tests.ps1
-D  test/Deleted.Tests.ps1
-C  test/Copied.Tests.ps1
-R  README.md -> README2.md
-M  test/Modified.Tests.ps1
-U  test/Unmerged.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Added.Tests.ps1
+1 D. N... 100644 000000 000000 2222222222222222222222222222222222222222 0000000000000000000000000000000000000000 test/Deleted.Tests.ps1
+2 C. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 C100 test/Copied.Tests.ps1	test/Copied.Tests.ps1
+2 R. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 R100 README2.md	README.md
+1 M. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified.Tests.ps1
+u U. N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Unmerged.Tests.ps1
 '@
             }
 
@@ -398,18 +412,19 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-A  test/Added.Tests.ps1
-D  test/Deleted.Tests.ps1
-C  test/Copied.Tests.ps1
-R  README.md -> README2.md
-M  test/Modified.Tests.ps1
-U  test/Unmerged.Tests.ps1
- ? test/Untracked.Tests.ps1
- A test/Added.Tests.ps1
- D test/Deleted.Tests.ps1
- M test/Modified.Tests.ps1
- U test/Unmerged.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 3333333333333333333333333333333333333333 test/Added.Tests.ps1
+1 D. N... 100644 000000 000000 2222222222222222222222222222222222222222 0000000000000000000000000000000000000000 test/Deleted.Tests.ps1
+2 C. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 C100 test/Copied.Tests.ps1	test/Copied.Tests.ps1
+2 R. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 R100 README2.md	README.md
+1 M. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified.Tests.ps1
+u U. N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Unmerged.Tests.ps1
+? test/Untracked.Tests.ps1
+1 .A N... 000000 000000 100644 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 test/Added.Tests.ps1
+1 .D N... 100644 100644 000000 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Deleted.Tests.ps1
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified.Tests.ps1
+u .U N... 100644 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 4444444444444444444444444444444444444444 test/Unmerged.Tests.ps1
 '@
             }
 
@@ -442,7 +457,7 @@ U  test/Unmerged.Tests.ps1
             # The status of a repository with many changed files is parsed
             # without a regular expression for every line, so that the prompt
             # does not take a long time to appear (#314).
-            $manyFiles = 1..2000 | ForEach-Object { " M test/Modified$_.Tests.ps1" }
+            $manyFiles = 1..2000 | ForEach-Object { "1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified$_.Tests.ps1" }
 
             Mock -ModuleName posh-git git {
                 $OFS = " "
@@ -451,7 +466,8 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines ((@(
-                    '## master'
+                    '# branch.oid 1111111111111111111111111111111111111111'
+                    '# branch.head master'
                 ) + $manyFiles) -join "`n")
             }
 
@@ -469,14 +485,127 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
- M "test/Modified File.Tests.ps1"
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+1 .M N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 test/Modified File.Tests.ps1
 '@
             }
 
             $status = Get-GitStatus
             $status.Working.Modified.Count | Should -Be 1
             $status.Working.Modified[0] | Should -Be 'test/Modified File.Tests.ps1'
+        }
+    }
+
+    Context 'Get-GitStatus porcelain version 2 tests' {
+        BeforeAll {
+            Set-Location $PSScriptRoot
+        }
+
+        It 'Returns the upstream and the number of commits the branch is ahead and behind' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+# branch.upstream origin/master
+# branch.ab +2 -3
+'@
+            }
+
+            $status = Get-GitStatus
+            $status.Branch | Should -Be 'master'
+            $status.Upstream | Should -Be 'origin/master'
+            $status.AheadBy | Should -Be 2
+            $status.BehindBy | Should -Be 3
+            $status.UpstreamGone | Should -Be $false
+        }
+
+        It 'Reports a branch whose upstream is gone' {
+            # Git does not report the number of commits the branch is ahead
+            # and behind, when the upstream does not exist.
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+# branch.upstream origin/master
+'@
+            }
+
+            $status = Get-GitStatus
+            $status.Branch | Should -Be 'master'
+            $status.Upstream | Should -Be 'origin/master'
+            $status.AheadBy | Should -Be 0
+            $status.BehindBy | Should -Be 0
+            $status.UpstreamGone | Should -Be $true
+        }
+
+        It 'Does not use the marker of a detached HEAD as the branch' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                if ($args -contains 'symbolic-ref') {
+                    return 'refs/heads/the-branch-of-the-worktree'
+                }
+                Convert-NativeLineEnding -SplitLines @'
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head (detached)
+'@
+            }
+
+            $status = Get-GitStatus
+            # The branch is read from Git, because the status only says that
+            # the HEAD is detached.
+            $status.Branch | Should -Be 'the-branch-of-the-worktree'
+            $status.Branch | Should -Not -Be '(detached)'
+        }
+
+        It 'Returns the branch of a repository without any commit' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+# branch.oid (initial)
+# branch.head feature/x
+'@
+            }
+
+            $status = Get-GitStatus
+            $status.Branch | Should -Be 'feature/x'
+        }
+
+        It 'Parses a renamed file as the file that it was renamed from' {
+            Mock -ModuleName posh-git git {
+                $OFS = " "
+                if ($args -contains 'rev-parse') {
+                    $res = Invoke-Expression "&$gitbin $args"
+                    return $res
+                }
+                Convert-NativeLineEnding -SplitLines @'
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+2 R. N... 100644 100644 100644 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333 R100 README2.md	README.md
+'@
+            }
+
+            $status = Get-GitStatus
+            $status.Index.Modified.Count | Should -Be 1
+            $status.Index.Modified[0] | Should -Be 'README.md'
         }
     }
 
@@ -564,8 +693,9 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-?? test/Foo.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+? test/Foo.Tests.ps1
 '@
             }
 
@@ -604,8 +734,9 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
-?? test/Foo.Tests.ps1
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
+? test/Foo.Tests.ps1
 '@
             }
 
@@ -654,7 +785,8 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 '@
             }
 
@@ -685,7 +817,8 @@ U  test/Unmerged.Tests.ps1
                     return $res
                 }
                 Convert-NativeLineEnding -SplitLines @'
-## master
+# branch.oid 1111111111111111111111111111111111111111
+# branch.head master
 '@
             }
 

@@ -164,19 +164,32 @@ function script:gitRemotes($filter) {
         quoteStringWithSpecialChars
 }
 
+function script:gitRemoteBranchNames {
+    # The names of the branches of the remotes, e.g. "origin/master".
+    #
+    # The names are read with a format, so that the output of Git does not
+    # have to be parsed. The format is supported since Git 2.13.
+    git branch -r '--format=%(refname:lstrip=2)'
+}
+
 function script:gitBranches($filter, $includeHEAD = $false, $prefix = '') {
     if ($filter -match "^(?<from>\S*\.{2,3})(?<to>.*)") {
         $prefix += $matches['from']
         $filter = $matches['to']
     }
 
+    # The names of the branches are read with a format, so that the output
+    # of Git does not have to be parsed. The format is supported since
+    # Git 2.13. The entry for a detached HEAD is not a branch, so it is not
+    # returned.
+    #
     # The branches of the remotes are only completed when they are wanted.
     $remoteBranches = @()
     if ($Global:GitTabSettings.EnableRemoteBranchCompletion) {
-        $remoteBranches = @(git branch --no-color -r | ForEach-Object { if ($_ -match "^  (?<ref>\S+)(?: -> .+)?") { $matches['ref'] } })
+        $remoteBranches = @(script:gitRemoteBranchNames)
     }
 
-    $branches = @(git branch --no-color | ForEach-Object { if (($_ -notmatch "^\* \(HEAD detached .+\)$") -and ($_ -match "^[\*\+]?\s*(?<ref>\S+)(?: -> .+)?")) { $matches['ref'] } }) +
+    $branches = @(git branch '--format=%(refname:short)' | Where-Object { $_ -notlike '(HEAD detached*' }) +
                 $remoteBranches +
                 @(if ($includeHEAD) { 'HEAD','FETCH_HEAD','ORIG_HEAD','MERGE_HEAD' })
 
@@ -189,8 +202,8 @@ function script:gitBranches($filter, $includeHEAD = $false, $prefix = '') {
 function script:gitRemoteUniqueBranches($filter) {
     if (!$Global:GitTabSettings.EnableRemoteBranchCompletion) { return }
 
-    git branch --no-color -r |
-        ForEach-Object { if ($_ -match "^  (?<remote>[^/]+)/(?<branch>\S+)(?! -> .+)?$") { $matches['branch'] } } |
+    script:gitRemoteBranchNames |
+        ForEach-Object { if ($_ -match "^(?<remote>[^/]+)/(?<branch>.+)$") { $matches['branch'] } } |
         Group-Object -NoElement |
         Where-Object { $_.Count -eq 1 } |
         Select-Object -ExpandProperty Name |
@@ -244,20 +257,26 @@ function script:gitFeatures($filter, $command) {
         $filter = $filter.Substring($featurePrefix.Length)
     }
 
-    # The escaped prefix is computed once, because it is used for every
-    # branch.
-    $escapedFeaturePrefix = [regex]::Escape($featurePrefix)
+    # The names of the branches are read with a format, so that the output
+    # of Git does not have to be parsed. The format is supported since
+    # Git 2.13. The entry for a detached HEAD is not a branch, so it is not
+    # returned.
+    $branches = @(git branch '--format=%(refname:short)' | ForEach-Object {
+        if ($_ -notlike '(HEAD detached*' -and
+            $_.StartsWith($featurePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $_.Substring($featurePrefix.Length)
+        }
+    })
 
-    $branches = @(git branch --no-color | ForEach-Object { if ($_ -match "^\*?\s*$escapedFeaturePrefix(?<ref>.*)") { $matches['ref'] } })
     $branches |
         Where-Object { $_ -ne '(no branch)' -and $_ -like "$filter*" } |
         quoteStringWithSpecialChars
 }
 
 function script:gitRemoteBranches($remote, $ref, $filter, $prefix = '') {
-    git branch --no-color -r |
-        Where-Object { $_ -like "  $remote/$filter*" } |
-        ForEach-Object { $prefix + $ref + ($_ -replace "  $remote/","") } |
+    script:gitRemoteBranchNames |
+        Where-Object { $_ -like "$remote/$filter*" } |
+        ForEach-Object { $prefix + $ref + $_.Substring($remote.Length + 1) } |
         quoteStringWithSpecialChars
 }
 

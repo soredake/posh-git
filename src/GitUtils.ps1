@@ -67,7 +67,36 @@ function Get-GitDirectory {
     }
 }
 
-function Get-GitBranch($branch = $null, $gitDir = $(Get-GitDirectory), [switch]$isDotGitOrBare, [Diagnostics.Stopwatch]$sw) {
+function script:Get-GitPseudoRef($gitDir, $askGit) {
+    # Returns the name of the pseudo ref that exists, or $null when none of
+    # them exists.
+    #
+    # A pseudo ref, e.g. CHERRY_PICK_HEAD, is a file in the .git directory,
+    # when Git stores its refs in files. It is an entry in the ref database,
+    # when Git stores its refs in the reftable format, so that it has to be
+    # read with Git in that case.
+    $names = 'CHERRY_PICK_HEAD', 'REVERT_HEAD'
+
+    foreach ($name in $names) {
+        if (Test-Path "$gitDir/$name") { return $name }
+    }
+
+    # Git stores its refs in the reftable format, if the .git directory
+    # contains a directory with that name. The pseudo refs are then only in
+    # the ref database, so that Git has to be asked whether they exist.
+    # Git is only asked when a file has a conflict, because that is the only
+    # case in which a cherry-pick or a revert is in progress.
+    if (!$askGit -or !(Test-Path "$gitDir/reftable")) { return $null }
+
+    foreach ($name in $names) {
+        $result = git --no-optional-locks rev-parse --verify --quiet $name 2>$null
+        if (($null -ne $result) -and ("$result").Length -gt 0) { return $name }
+    }
+
+    return $null
+}
+
+function Get-GitBranch($branch = $null, $gitDir = $(Get-GitDirectory), [switch]$isDotGitOrBare, [switch]$HasUnmerged, [Diagnostics.Stopwatch]$sw) {
     if (!$gitDir) { return }
 
     Invoke-Utf8ConsoleCommand {
@@ -88,6 +117,11 @@ function Get-GitBranch($branch = $null, $gitDir = $(Get-GitDirectory), [switch]$
             $total = "$(Get-Content $gitDir/rebase-merge/end)"
         }
         else {
+            # The pseudo refs are read before the state is determined, because
+            # they are needed to know whether a cherry-pick or a revert is in
+            # progress.
+            $pseudoRef = script:Get-GitPseudoRef $gitDir $HasUnmerged
+
             if (Test-Path $gitDir/rebase-apply) {
                 dbg 'Found rebase-apply' $sw
                 $step = "$(Get-Content $gitDir/rebase-apply/next)"
@@ -109,11 +143,11 @@ function Get-GitBranch($branch = $null, $gitDir = $(Get-GitDirectory), [switch]$
                 dbg 'Found MERGE_HEAD' $sw
                 $r = '|MERGING'
             }
-            elseif (Test-Path $gitDir/CHERRY_PICK_HEAD) {
+            elseif ($pseudoRef -eq 'CHERRY_PICK_HEAD') {
                 dbg 'Found CHERRY_PICK_HEAD' $sw
                 $r = '|CHERRY-PICKING'
             }
-            elseif (Test-Path $gitDir/REVERT_HEAD) {
+            elseif ($pseudoRef -eq 'REVERT_HEAD') {
                 dbg 'Found REVERT_HEAD' $sw
                 $r = '|REVERTING'
             }
@@ -330,6 +364,7 @@ function script:Get-GitStatusInternal {
         $behindBy = 0
         $gone = $false
         $upstream = $null
+        $hasUnmerged = $false
 
         $indexAdded = New-Object System.Collections.Generic.List[string]
         $indexModified = New-Object System.Collections.Generic.List[string]
@@ -548,11 +583,14 @@ function script:Get-GitStatusInternal {
                         $working = $fields[1][1]
                     }
                     elseif ($type -eq 'u') {
-                        # An unmerged entry.
+                        # An unmerged entry. A file with a conflict is only
+                        # unmerged, when a cherry-pick, a revert or a merge
+                        # is in progress.
                         $fields = $line -split ' ', 11
                         $path1 = $fields[10]
                         $index = $fields[1][0]
                         $working = $fields[1][1]
+                        $hasUnmerged = $true
                     }
                     elseif ($type -eq '?') {
                         # An untracked file. The path is separated from the
@@ -609,7 +647,7 @@ function script:Get-GitStatusInternal {
             }
         }
 
-        $branch = Get-GitBranch -Branch $branch -GitDir $GitDir -IsDotGitOrBare:$isDotGitOrBare -sw $sw
+        $branch = Get-GitBranch -Branch $branch -GitDir $GitDir -IsDotGitOrBare:$isDotGitOrBare -HasUnmerged:$hasUnmerged -sw $sw
 
         dbg 'Building status object' $sw
 

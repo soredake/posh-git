@@ -929,7 +929,7 @@ $PoshGitVcsPrompt = {
                 $gitDir = Get-GitDirectory
                 if ($gitDir -and $global:GitStatus.GitDir -eq $gitDir) {
                     $status = $global:GitStatus
-                    $status.Branch = Get-GitBranch -GitDir $gitDir
+                    $status.Branch = Get-GitBranch -GitDir $gitDir -HasUnmerged:($status.Index.Unmerged.Count -gt 0 -or $status.Working.Unmerged.Count -gt 0)
                 }
             }
         }

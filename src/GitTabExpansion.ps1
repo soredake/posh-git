@@ -240,9 +240,18 @@ function script:gitTags($filter, $prefix = '') {
     therefore completed without the prefix.
 #>
 function script:gitFeatures($filter, $command) {
-    # The prefix is looked up the same way as git flow does it, so that a
-    # prefix that is not set for the repository is found as well.
-    $featurePrefix = git config --get "gitflow.prefix.$command"
+    # Look for the git flow prefix in this order (same as git flow):
+    # 1. Local config (--local)
+    # 2. Global config (--global)
+    # 3. System config (--system)
+    #    (The --local parameter is omitted for global and system)
+    $featurePrefix = git config --local --get "gitflow.prefix.$command"
+    if (!$featurePrefix) {
+        $featurePrefix = git config --global --get "gitflow.prefix.$command"
+    }
+    if (!$featurePrefix) {
+        $featurePrefix = git config --system --get "gitflow.prefix.$command"
+    }
 
     # The prefix must not be null, because it is used as the argument of a
     # method of .NET, which does not accept null on all versions of
@@ -318,7 +327,26 @@ function script:getGitStatusForCompletion($GitStatus) {
     if ($global:GitStatus) { return $global:GitStatus }
 
     try {
+        # Try to get the status from the background computation, which is much faster.
+        # The status is only returned if it's available within a short timeout.
+        $status = Get-BackgroundGitStatus -TimeoutMilliseconds 50
+        if ($status) {
+            $global:GitStatus = $status
+            return $status
+        }
+
+        # If the background status is not available, try the old method with a timeout
+        # to avoid hanging when Git status is slow.
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $sw.Start()
+
         $global:GitStatus = Get-GitStatus
+
+        $sw.Stop()
+        if ($sw.ElapsedMilliseconds -gt 1000) {
+            # Warn the user that Git status took a long time
+            Write-Warning "Getting Git status took $($sw.ElapsedMilliseconds)ms. This may indicate a slow repository (e.g. with many files or LFS)."]
+        }
     }
     catch {
         $global:GitStatus = $null
